@@ -28,20 +28,42 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Create App Icon Placeholder
+      - name: Initialize Android Skeleton & Permissions
         run: |
-          mkdir -p assets/icon
-          cat << 'EOF' > assets/icon/icon.png
-          iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAVklEQVR4nO3PMRHAMAAEwffT9wWb
-          c4U+wAEMzM627w74650DeA7gOYDnAJ4DeA7gOYDnAJ4DeA7gOYDnAJ4DeA7gOYDnAJ4DeA7gOYDn
-          AJ4DeA7gOYDnAJ4DeI8HnI4B0Qz+kPMAAAAASUVORK5CYII=
-          EOF
+          # Create android project files if missing
+          flutter create . --platforms=android --org com.example
 
-      - name: Install Project Dependencies
+          # Set minimum SDK to 21 for flutter_inappwebview
+          sed -i 's/minSdkVersion .*/minSdkVersion 21/' android/app/build.gradle 2>/dev/null || true
+          sed -i 's/minSdk = .*/minSdk = 21/' android/app/build.gradle 2>/dev/null || true
+          sed -i 's/flutter.minSdkVersion/21/' android/app/build.gradle 2>/dev/null || true
+
+          # Enable Internet permission in AndroidManifest.xml
+          sed -i '/<manifest/a \    <uses-permission android:name="android.permission.INTERNET"\/>' android/app/src/main/AndroidManifest.xml 2>/dev/null || true
+
+      - name: Generate App Icon
+        run: |
+          sudo apt-get update && sudo apt-get install -y imagemagick
+          mkdir -p android/app/src/main/res/mipmap-hdpi
+          mkdir -p android/app/src/main/res/mipmap-mdpi
+          mkdir -p android/app/src/main/res/mipmap-xhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxxhdpi
+
+          # Generate Word Pro styled icon
+          convert -size 512x512 xc:'#2b579a' \
+                  -fill white -gravity center \
+                  -font "DejaVu-Sans-Bold" -pointsize 280 -annotate +0+0 "W" \
+                  base_icon.png
+
+          convert base_icon.png -resize 72x72 android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+          convert base_icon.png -resize 48x48 android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+          convert base_icon.png -resize 96x96 android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          convert base_icon.png -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          convert base_icon.png -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+
+      - name: Install Dependencies
         run: flutter pub get
-
-      - name: Generate Launcher Icons
-        run: dart run flutter_launcher_icons
 
       - name: Build Android Release APK
         run: flutter build apk --release
