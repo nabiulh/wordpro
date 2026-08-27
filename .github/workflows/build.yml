@@ -1,0 +1,54 @@
+name: Build Release APK
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Java Development Kit (JDK 17)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Create App Icon Placeholder
+        run: |
+          mkdir -p assets/icon
+          cat << 'EOF' > assets/icon/icon.png
+          iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAVklEQVR4nO3PMRHAMAAEwffT9wWb
+          c4U+wAEMzM627w74650DeA7gOYDnAJ4DeA7gOYDnAJ4DeA7gOYDnAJ4DeA7gOYDnAJ4DeA7gOYDn
+          AJ4DeA7gOYDnAJ4DeI8HnI4B0Qz+kPMAAAAASUVORK5CYII=
+          EOF
+
+      - name: Install Project Dependencies
+        run: flutter pub get
+
+      - name: Generate Launcher Icons
+        run: dart run flutter_launcher_icons
+
+      - name: Build Android Release APK
+        run: flutter build apk --release
+
+      - name: Upload Release APK as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WordPro-Release-APK
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
